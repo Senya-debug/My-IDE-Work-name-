@@ -1,2 +1,0 @@
-set(__QT_DEPLOY_TARGET_MyIDE_FILE /home/senya/Projects/MyIDE/build/MyIDE)
-set(__QT_DEPLOY_TARGET_MyIDE_TYPE EXECUTABLE)
