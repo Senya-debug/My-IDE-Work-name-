@@ -1,0 +1,5 @@
+/home/senya/Projects/MyIDE/build/CMakeFiles/MyIDE.dir
+/home/senya/Projects/MyIDE/build/CMakeFiles/edit_cache.dir
+/home/senya/Projects/MyIDE/build/CMakeFiles/rebuild_cache.dir
+/home/senya/Projects/MyIDE/build/CMakeFiles/MyIDE_autogen_timestamp_deps.dir
+/home/senya/Projects/MyIDE/build/CMakeFiles/MyIDE_autogen.dir
