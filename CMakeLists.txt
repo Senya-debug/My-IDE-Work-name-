@@ -9,11 +9,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
-
-add_executable(MyIDE 
+set(SOURCES 
 	src/main.cpp
 	src/window/MainWindow.cpp
+	src/window/AboutWindow.cpp
 )
+set(UIS src/window/AboutWindow.ui)
+add_executable(MyIDE ${SOURCES} ${UIS})
 
 target_include_directories(MyIDE PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/window
