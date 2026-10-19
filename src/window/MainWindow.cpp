@@ -1,18 +1,21 @@
 #include "MainWindow.h"
 #include "AboutWindow.h"
 
+#include "../core/File.h"
 
 #include <QApplication>
 #include <QDebug>
 #include <QToolBar>
 #include <QStatusBar>
 #include <QDockWidget>
+#include <QFileDialog>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 	resize(800, 600);
 	setWindowTitle("MyIDE");
 
 	m_newFileAction = new QAction("New file", this);
+	m_saveProjectAction = new QAction("Save project", this);
 	m_openProjectAction = new QAction("Open project", this);
 	m_exitAction = new QAction("Exit", this);
 
@@ -23,6 +26,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 	m_aboutMenuAction = new QAction("About");
 
 	connect(m_newFileAction, &QAction::triggered, this, &MainWindow::onNewFileTriggered);
+//	connect(m_saveProjectAction, &QAction::triggered, this, &MainWindow::onNewFileTriggered);
+	connect(m_openProjectAction, &QAction::triggered, this, &MainWindow::onOpenFileTriggered);
 	connect(m_exitAction, &QAction::triggered, this, &MainWindow::onExitTriggered);
 	connect(m_aboutMenuAction, &QAction::triggered, this, &MainWindow::onAboutMenuTriggered);
 
@@ -30,8 +35,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 	createMenuBar();
 	createStatusBar();
 
+	createWorkspaceBar();
 	createFileTreeDock();
-	createWorkspaceDock();
 	createConsoleDock();
 }
 
@@ -48,6 +53,7 @@ void MainWindow::createMenuBar() {
 	QMenu *helpmenu = mainMenu->addMenu("Help");
 
 	filemenu->addAction(m_newFileAction);
+	filemenu->addAction(m_saveProjectAction);
 	filemenu->addAction(m_openProjectAction);
 	filemenu->addAction(m_exitAction);
 
@@ -64,6 +70,7 @@ void MainWindow::createToolBar(){
 	this->addToolBar(mainbar);
 
 	mainbar->addAction(m_newFileAction);
+	mainbar->addAction(m_saveProjectAction);
 	mainbar->addAction(m_openProjectAction);
 
 	mainbar->addAction(m_runProjectAction);
@@ -85,11 +92,26 @@ void MainWindow::createFileTreeDock(){
 
 }
 
-void MainWindow::createWorkspaceDock(){
+void MainWindow::createWorkspaceBar(){
 
-	QDockWidget *workspacedock = new QDockWidget("Test", this);
-    workspacedock->setDockLocation(Qt::DockWidgetArea::RightDockWidgetArea);
+	m_tabwidget = new QTabWidget(this);
 
+	m_tabwidget->setTabsClosable(true);
+	m_tabwidget->setMovable(true);
+	m_tabwidget->setDocumentMode(true);
+
+	this->setCentralWidget(m_tabwidget);
+	connect(m_tabwidget, &QTabWidget::tabCloseRequested, this, &MainWindow::onCloseTabTriggered );
+
+}
+
+void MainWindow::onCloseTabTriggered(int index){
+
+	QWidget *w = m_tabwidget->widget(index);
+
+	m_tabwidget->removeTab(index);
+
+	delete w;
 }
 
 void MainWindow::createConsoleDock(){
@@ -98,8 +120,25 @@ void MainWindow::createConsoleDock(){
  	cosnoledock->setDockLocation(Qt::DockWidgetArea::BottomDockWidgetArea);
 
 }
+
+void MainWindow::onOpenFileTriggered(){
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"), "/home", tr("C++ files (*.cpp *.h *.hpp *.cc)"));
+
+	QString openedfile = loadfile(fileName);
+	QPlainTextEdit *texteditor = new QPlainTextEdit(m_tabwidget);
+	int index = m_tabwidget->addTab(texteditor, fileName);
+	texteditor->setPlainText(openedfile);
+}
+
+void MainWindow::onSaveProjectTriggered(){
+	}
+
 void MainWindow::onNewFileTriggered() {
-	qDebug() << "New project!";
+	QPlainTextEdit *texteditor = new QPlainTextEdit(m_tabwidget);
+	int index = m_tabwidget->addTab(texteditor, "untitled");
+	QFont font("Monospace", 20);
+	texteditor->setFont(font);
+	m_tabwidget->setCurrentIndex(index);
 }
 
 void MainWindow::onExitTriggered() {
@@ -113,8 +152,4 @@ void MainWindow::onAboutMenuTriggered(){
 
 	m_aboutwindow->show();
 	m_aboutwindow->activateWindow();
-
-
-
-
 }

@@ -3,6 +3,9 @@
 #include <QMenu>
 #include <QAction>
 #include <QMenuBar>
+#include <QTabWidget>
+#include <QPlainTextEdit>
+#include <QFont>
 
 class AboutWindow;
 
@@ -14,7 +17,11 @@ public:
 
 private slots:
 	void onNewFileTriggered();
+	void onOpenFileTriggered();
+	void onSaveProjectTriggered();
 	void onExitTriggered();
+
+	void onCloseTabTriggered(int index);
 
 	void onAboutMenuTriggered();
 
@@ -22,14 +29,16 @@ private:
 	void createMenuBar();
 	void createToolBar();
 	void createStatusBar();
+	void createWorkspaceBar();
+	void createWelcomeTab();
 
 	void createFileTreeDock();
-	void createWorkspaceDock();
 	void createConsoleDock();
 
 	AboutWindow *m_aboutwindow = nullptr;
 private:
 	QAction *m_newFileAction = nullptr;
+	QAction *m_saveProjectAction = nullptr;
 	QAction *m_openProjectAction = nullptr;
 	QAction *m_exitAction = nullptr;
 
@@ -37,4 +46,6 @@ private:
 	QAction *m_debugProjectAction = nullptr;
 
 	QAction *m_aboutMenuAction = nullptr;
+private:
+	QTabWidget *m_tabwidget = nullptr;
 };

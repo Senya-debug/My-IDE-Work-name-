@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 set(SOURCES 
 	src/main.cpp
+	src/core/File.cpp
 	src/window/MainWindow.cpp
 	src/window/AboutWindow.cpp
 )
