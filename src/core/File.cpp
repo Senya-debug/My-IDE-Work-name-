@@ -14,3 +14,16 @@ QString loadfile(const QString &openfile){
 
 	return filecontent;
 }
+
+void savefile(QString &savefile, QString &sourcetext, QWidget *parent){
+	QFile file(savefile);
+
+	if(!file.open(QIODevice::WriteOnly | QIODevice::Text))
+		return ;
+
+	QTextStream out(&file);
+	out << sourcetext << "\n";
+
+	file.close();
+	
+}

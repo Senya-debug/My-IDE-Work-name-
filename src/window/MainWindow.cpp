@@ -1,7 +1,9 @@
 #include "MainWindow.h"
 #include "AboutWindow.h"
+#include "CodeEditor.h"
 
 #include "../core/File.h"
+#include "../KeyBindings.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -9,15 +11,21 @@
 #include <QStatusBar>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QFileInfo>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 	resize(800, 600);
 	setWindowTitle("MyIDE");
 
 	m_newFileAction = new QAction("New file", this);
+	m_newFileAction->setShortcut(Keys::NEW_FILE);
 	m_saveProjectAction = new QAction("Save project", this);
+	m_saveProjectAction->setShortcut(Keys::SAVE_FILE);
 	m_openProjectAction = new QAction("Open project", this);
+	m_openProjectAction->setShortcut(Keys::OPEN_FILE);
 	m_exitAction = new QAction("Exit", this);
+	m_exitAction->setShortcut(Keys::QUIT);
 
 	m_runProjectAction = new QAction("Run", this);
 	m_debugProjectAction = new QAction("Debug", this);
@@ -26,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 	m_aboutMenuAction = new QAction("About");
 
 	connect(m_newFileAction, &QAction::triggered, this, &MainWindow::onNewFileTriggered);
-//	connect(m_saveProjectAction, &QAction::triggered, this, &MainWindow::onNewFileTriggered);
+	connect(m_saveProjectAction, &QAction::triggered, this, &MainWindow::onSaveProjectTriggered);
 	connect(m_openProjectAction, &QAction::triggered, this, &MainWindow::onOpenFileTriggered);
 	connect(m_exitAction, &QAction::triggered, this, &MainWindow::onExitTriggered);
 	connect(m_aboutMenuAction, &QAction::triggered, this, &MainWindow::onAboutMenuTriggered);
@@ -38,6 +46,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 	createWorkspaceBar();
 	createFileTreeDock();
 	createConsoleDock();
+
 }
 
 void MainWindow::createMenuBar() {
@@ -107,6 +116,27 @@ void MainWindow::createWorkspaceBar(){
 
 void MainWindow::onCloseTabTriggered(int index){
 
+    CodeEditor *currentEditor = qobject_cast<CodeEditor*>(m_tabwidget->widget(index));
+
+	if(currentEditor->getModifed()){
+		QMessageBox msgbox(this);
+		msgbox.setText("This file has been modifed.");
+		msgbox.setInformativeText("Do you want to save your changes?");
+		msgbox.setStandardButtons(QMessageBox::Save | QMessageBox::Save | QMessageBox::Discard);
+		msgbox.setDefaultButton(QMessageBox::Save);
+		int ret = msgbox.exec();
+		
+		switch(ret){
+			case QMessageBox::Save:
+				MainWindow::onSaveProjectTriggered();
+				break;
+			case QMessageBox::Discard:
+				break;
+			case QMessageBox::Cancel:
+				return;
+		}
+	}
+
 	QWidget *w = m_tabwidget->widget(index);
 
 	m_tabwidget->removeTab(index);
@@ -122,27 +152,81 @@ void MainWindow::createConsoleDock(){
 }
 
 void MainWindow::onOpenFileTriggered(){
+
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"), "/home", tr("C++ files (*.cpp *.h *.hpp *.cc)"));
 
 	QString openedfile = loadfile(fileName);
-	QPlainTextEdit *texteditor = new QPlainTextEdit(m_tabwidget);
-	int index = m_tabwidget->addTab(texteditor, fileName);
+
+	if (fileName.isEmpty())
+		return;
+
+	CodeEditor *texteditor = new CodeEditor(m_tabwidget);
+
+	texteditor->blockSignals(true);
 	texteditor->setPlainText(openedfile);
+	texteditor->blockSignals(false);
+	texteditor->setFilePath(fileName);	
+
+	QFileInfo fileinfo(fileName);
+	QString fname = fileinfo.fileName();
+
+	int index = m_tabwidget->addTab(texteditor, fname);
+	m_tabwidget->setCurrentIndex(index);
+
+	connect(texteditor, &CodeEditor::textChanged, this, &MainWindow::updateTabName);
+	updateTabName();
 }
 
 void MainWindow::onSaveProjectTriggered(){
-	}
+
+    CodeEditor *currentEditor = qobject_cast<CodeEditor*>(m_tabwidget->currentWidget());
+
+	QString filepath = currentEditor->getFilePath();
+
+	if (filepath.isEmpty())
+		filepath = QFileDialog::getSaveFileName(this, tr("Save file"), "/home", tr("C++ files (*.cpp *.h *.hpp *.cc)"));
+
+	QString fileSource = currentEditor->toPlainText();
+
+	savefile(filepath,fileSource,this);
+
+	currentEditor->setFilePath(filepath);
+
+	QFileInfo fileinfo(filepath);
+	QString fname = fileinfo.fileName();
+
+	m_tabwidget->setTabText(m_tabwidget->currentIndex(), fname);
+	currentEditor->setModifed(false);
+
+}
 
 void MainWindow::onNewFileTriggered() {
-	QPlainTextEdit *texteditor = new QPlainTextEdit(m_tabwidget);
+	CodeEditor *texteditor = new CodeEditor(m_tabwidget);
 	int index = m_tabwidget->addTab(texteditor, "untitled");
-	QFont font("Monospace", 20);
-	texteditor->setFont(font);
 	m_tabwidget->setCurrentIndex(index);
+
+	connect(texteditor, &CodeEditor::textChanged, this, &MainWindow::updateTabName);
 }
 
 void MainWindow::onExitTriggered() {
 	qApp->quit();
+}
+
+void MainWindow::updateTabName(){
+    CodeEditor *currentEditor = qobject_cast<CodeEditor*>(m_tabwidget->currentWidget());
+	
+	int index = m_tabwidget->currentIndex();
+	if (index == -1) return;
+
+
+	if(currentEditor->getModifed()){
+		QString currentTabText = m_tabwidget->tabText(index);
+
+		if(!currentTabText.endsWith(" *"))
+			m_tabwidget->setTabText(index, currentTabText + " *");
+    
+	}
+
 }
 
 void MainWindow::onAboutMenuTriggered(){

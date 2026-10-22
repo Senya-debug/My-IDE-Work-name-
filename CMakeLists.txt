@@ -14,6 +14,7 @@ set(SOURCES
 	src/core/File.cpp
 	src/window/MainWindow.cpp
 	src/window/AboutWindow.cpp
+	src/window/CodeEditor.cpp
 )
 set(UIS src/window/AboutWindow.ui)
 add_executable(MyIDE ${SOURCES} ${UIS})
@@ -21,4 +22,4 @@ add_executable(MyIDE ${SOURCES} ${UIS})
 target_include_directories(MyIDE PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/window
 )
-target_link_libraries(MyIDE PRIVATE Qt6::Widgets)
+target_link_libraries(MyIDE PRIVATE Qt6::Core Qt6::Widgets Qt6::Gui)

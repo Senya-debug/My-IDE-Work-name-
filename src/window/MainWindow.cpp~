@@ -1,0 +1,226 @@
+#include "MainWindow.h"
+#include "AboutWindow.h"
+#include "CodeEditor.h"
+
+#include "../core/File.h"
+#include "../KeyBindings.h"
+
+#include <QApplication>
+#include <QDebug>
+#include <QToolBar>
+#include <QStatusBar>
+#include <QDockWidget>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QMessageBox>
+
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+	resize(800, 600);
+	setWindowTitle("MyIDE");
+
+	m_newFileAction = new QAction("New file", this);
+	m_newFileAction->setShortcut(Keys::NEW_FILE);
+	m_saveProjectAction = new QAction("Save project", this);
+	m_saveProjectAction->setShortcut(Keys::SAVE_FILE);
+	m_openProjectAction = new QAction("Open project", this);
+	m_openProjectAction->setShortcut(Keys::OPEN_FILE);
+	m_exitAction = new QAction("Exit", this);
+	m_exitAction->setShortcut(Keys::QUIT);
+
+	m_runProjectAction = new QAction("Run", this);
+	m_debugProjectAction = new QAction("Debug", this);
+
+
+	m_aboutMenuAction = new QAction("About");
+
+	connect(m_newFileAction, &QAction::triggered, this, &MainWindow::onNewFileTriggered);
+	connect(m_saveProjectAction, &QAction::triggered, this, &MainWindow::onSaveProjectTriggered);
+	connect(m_openProjectAction, &QAction::triggered, this, &MainWindow::onOpenFileTriggered);
+	connect(m_exitAction, &QAction::triggered, this, &MainWindow::onExitTriggered);
+	connect(m_aboutMenuAction, &QAction::triggered, this, &MainWindow::onAboutMenuTriggered);
+
+	createToolBar();
+	createMenuBar();
+	createStatusBar();
+
+	createWorkspaceBar();
+	createFileTreeDock();
+	createConsoleDock();
+
+}
+
+void MainWindow::createMenuBar() {
+
+	QMenuBar *mainMenu = this->menuBar();
+
+	QMenu *filemenu = mainMenu->addMenu("File");
+	QMenu *editmenu = mainMenu->addMenu("Edit");
+	QMenu *viewmenu = mainMenu->addMenu("View");
+	QMenu *projectmenu = mainMenu->addMenu("Project");
+	QMenu *gitmenu = mainMenu->addMenu("Git");
+	QMenu *optionsmenu = mainMenu->addMenu("Settings");
+	QMenu *helpmenu = mainMenu->addMenu("Help");
+
+	filemenu->addAction(m_newFileAction);
+	filemenu->addAction(m_saveProjectAction);
+	filemenu->addAction(m_openProjectAction);
+	filemenu->addAction(m_exitAction);
+
+	projectmenu->addAction(m_runProjectAction);
+	projectmenu->addAction(m_debugProjectAction);
+
+	helpmenu->addAction(m_aboutMenuAction);
+
+}
+
+void MainWindow::createToolBar(){
+
+	QToolBar *mainbar = new QToolBar(this);
+	this->addToolBar(mainbar);
+
+	mainbar->addAction(m_newFileAction);
+	mainbar->addAction(m_saveProjectAction);
+	mainbar->addAction(m_openProjectAction);
+
+	mainbar->addAction(m_runProjectAction);
+	mainbar->addAction(m_debugProjectAction);
+
+}
+void MainWindow::createStatusBar(){
+
+	QStatusBar *statusbar = new QStatusBar(this);
+	this->setStatusBar(statusbar);
+	statusbar->showMessage(tr("Hello"));
+}
+
+void MainWindow::createFileTreeDock(){
+
+	QDockWidget *filetreedock = new QDockWidget("File tree", this);
+    filetreedock->setDockLocation(Qt::DockWidgetArea::LeftDockWidgetArea);
+
+
+}
+
+void MainWindow::createWorkspaceBar(){
+
+	m_tabwidget = new QTabWidget(this);
+
+	m_tabwidget->setTabsClosable(true);
+	m_tabwidget->setMovable(true);
+	m_tabwidget->setDocumentMode(true);
+
+	this->setCentralWidget(m_tabwidget);
+	connect(m_tabwidget, &QTabWidget::tabCloseRequested, this, &MainWindow::onCloseTabTriggered );
+
+	updateTabName();
+}
+
+void MainWindow::onCloseTabTriggered(int index){
+
+    CodeEditor *currentEditor = qobject_cast<CodeEditor*>(m_tabwidget->currentWidget());
+
+	if(currentEditor->getModifed()){
+		QMessageBox msgbox(this);
+		msgbox.setText("This file has been modifed.");
+		msgbox.setInformativeText("Do you want to save your changes?");
+		msgbox.setStandardButtons(QMessageBox::Save | QMessageBox::Save | QMessageBox::Discard);
+		msgbox.setDefaultButton(QMessageBox::Save);
+		int ret = msgbox.exec();
+		
+		switch(ret){
+			case QMessageBox::Save:
+				MainWindow::onSaveProjectTriggered();
+				break;
+			case QMessageBox::Discard:
+				break;
+		}
+	}
+
+	QWidget *w = m_tabwidget->widget(index);
+
+	m_tabwidget->removeTab(index);
+
+	delete w;
+}
+
+void MainWindow::createConsoleDock(){
+
+	QDockWidget *cosnoledock = new QDockWidget("Console", this);
+ 	cosnoledock->setDockLocation(Qt::DockWidgetArea::BottomDockWidgetArea);
+
+}
+
+void MainWindow::onOpenFileTriggered(){
+
+	QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"), "/home", tr("C++ files (*.cpp *.h *.hpp *.cc)"));
+
+	QString openedfile = loadfile(fileName);
+
+	if (fileName.isEmpty())
+		return;
+
+	CodeEditor *texteditor = new CodeEditor(m_tabwidget);
+
+	texteditor->blockSignals(true);
+	texteditor->setPlainText(openedfile);
+	texteditor->blockSignals(false);
+	texteditor->setFilePath(fileName);	
+
+	QFileInfo fileinfo(fileName);
+	QString fname = fileinfo.fileName();
+
+	int index = m_tabwidget->addTab(texteditor, fname);
+	m_tabwidget->setCurrentIndex(index);
+
+}
+
+void MainWindow::onSaveProjectTriggered(){
+
+    CodeEditor *currentEditor = qobject_cast<CodeEditor*>(m_tabwidget->currentWidget());
+
+	QString filepath = currentEditor->getFilePath();
+
+	if (filepath.isEmpty())
+		filepath = QFileDialog::getSaveFileName(this, tr("Save file"), "/home", tr("C++ files (*.cpp *.h *.hpp *.cc)"));
+
+	QString fileSource = currentEditor->toPlainText();
+
+	savefile(filepath,fileSource,this);
+
+	currentEditor->setFilePath(filepath);
+
+	QFileInfo fileinfo(filepath);
+	QString fname = fileinfo.fileName();
+
+	m_tabwidget->setTabText(m_tabwidget->currentIndex(), fname);
+	currentEditor->setModifed(false);
+
+}
+
+void MainWindow::onNewFileTriggered() {
+	CodeEditor *texteditor = new CodeEditor(m_tabwidget);
+	int index = m_tabwidget->addTab(texteditor, "untitled");
+	m_tabwidget->setCurrentIndex(index);
+}
+
+void MainWindow::onExitTriggered() {
+	qApp->quit();
+}
+
+void MainWindow::updateTabName(){
+    CodeEditor *currentEditor = qobject_cast<CodeEditor*>(m_tabwidget->currentWidget());
+	
+	int index = m_tabwidget->currentIndex();
+	if(currentEditor->getModifed())
+		m_tabwidget->setTabText(index, m_tabwidget->tabText(index) + "*");
+
+}
+
+void MainWindow::onAboutMenuTriggered(){
+	if(!m_aboutwindow){
+		m_aboutwindow = new AboutWindow(this);
+	}
+
+	m_aboutwindow->show();
+	m_aboutwindow->activateWindow();
+}

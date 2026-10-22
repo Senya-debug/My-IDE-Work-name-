@@ -32,6 +32,8 @@ private:
 	void createWorkspaceBar();
 	void createWelcomeTab();
 
+	void updateTabName();
+
 	void createFileTreeDock();
 	void createConsoleDock();
 
